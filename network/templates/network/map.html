@@ -1,9 +1,7 @@
-<!-- templates/network/map.html -->
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Network Map</title>
+    <title>Map View</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v9.2.4/ol.css">
     <style>
         .map {
@@ -13,90 +11,95 @@
     </style>
 </head>
 <body>
-    <div id="map" class="map"></div>
-    <script src="https://cdn.jsdelivr.net/npm/ol@v9.2.4/dist/ol.js"></script>
-    <script>
-        console.log('Initializing map...');
-
-        // Initialize map
-        var map = new ol.Map({
-            target: 'map',
-            layers: [
-                new ol.layer.Tile({
-                    source: new ol.source.OSM()
-                })
-            ],
-            view: new ol.View({
-                center: ol.proj.fromLonLat([58.3894, 23.6143]), // Center on Oman
-                zoom: 7
+<div id="map" class="map"></div>
+<div id="info" style="position: absolute; bottom: 10px; left: 10px; background: rgba(255, 255, 255, 0.8); padding: 10px;"></div>
+<script src="https://cdn.jsdelivr.net/npm/ol@v9.2.4/dist/ol.js"></script>
+<script>
+    console.log("Initializing map...");
+    const map = new ol.Map({
+        target: 'map',
+        layers: [
+            new ol.layer.Tile({
+                source: new ol.source.OSM()
             })
-        });
+        ],
+        view: new ol.View({
+            center: ol.proj.fromLonLat([57.0000, 23.0000]),
+            zoom: 7
+        })
+    });
+    console.log("Map initialized.");
 
-        console.log('Map initialized.');
+    const urls = {
+        'tracks': 'http://localhost:8000/api/tracks/',
+        'ducts': 'http://localhost:8000/api/ducts/',
+        'subducts': 'http://localhost:8000/api/subducts/',
+        'cables': 'http://localhost:8000/api/cables/'
+    };
 
-        // Function to add layer
-        function addLayer(url, color) {
-            fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Data fetched:', data);
+    const styles = {
+        'tracks': new ol.style.Style({
+            stroke: new ol.style.Stroke({
+                color: 'blue',
+                width: 2
+            })
+        }),
+        'ducts': new ol.style.Style({
+            stroke: new ol.style.Stroke({
+                color: 'green',
+                width: 2
+            })
+        }),
+        'subducts': new ol.style.Style({
+            stroke: new ol.style.Stroke({
+                color: 'orange',
+                width: 2
+            })
+        }),
+        'cables': new ol.style.Style({
+            stroke: new ol.style.Stroke({
+                color: 'red',
+                width: 2
+            })
+        })
+    };
 
-                    if (data.features && data.features.length > 0) {
-                        var vectorSource = new ol.source.Vector({
-                            features: new ol.format.GeoJSON().readFeatures(data, {
-                                dataProjection: 'EPSG:4326',
-                                featureProjection: 'EPSG:3857'
-                            })
-                        });
+    for (const [key, url] of Object.entries(urls)) {
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                console.log(`Data fetched from ${url}: `, data);
+                const features = new ol.format.GeoJSON().readFeatures(data, {
+                    featureProjection: 'EPSG:3857'
+                });
+                const vectorSource = new ol.source.Vector({
+                    features: features
+                });
+                const vectorLayer = new ol.layer.Vector({
+                    source: vectorSource,
+                    style: styles[key]
+                });
+                map.addLayer(vectorLayer);
+                console.log(`Layer for ${key} added to map.`);
+            });
+    }
 
-                        var vectorLayer = new ol.layer.Vector({
-                            source: vectorSource,
-                            style: new ol.style.Style({
-                                stroke: new ol.style.Stroke({
-                                    color: color,
-                                    width: 2
-                                })
-                            })
-                        });
-
-                        map.addLayer(vectorLayer);
-                        map.getView().fit(vectorSource.getExtent(), { size: map.getSize(), maxZoom: 15 });
-                        console.log('Layer added to map.');
-                    } else {
-                        console.log('No features found in the data.');
-                    }
-                })
-                .catch(error => console.log('Error:', error));
-        }
-
-        // Add layers
-        addLayer('/api/tracks/', 'red');
-        addLayer('/api/ducts/', 'green');
-        addLayer('/api/subducts/', 'blue');
-        addLayer('/api/cables/', 'orange');
-
-        // Add interactivity
-        map.on('singleclick', function (evt) {
-            var coordinate = evt.coordinate;
-            var viewResolution = map.getView().getResolution();
-            var url = vectorLayer.getSource().getFeatureInfoUrl(
-                evt.coordinate, viewResolution, 'EPSG:3857',
-                {'INFO_FORMAT': 'application/json'}
-            );
-
-            if (url) {
-                fetch(url)
-                    .then(response => response.json())
-                    .then(data => {
-                        console.log('Feature Info:', data);
-                        if (data.features.length > 0) {
-                            var feature = data.features[0];
-                            var info = '<h3>' + feature.properties.name + '</h3>';
-                            document.getElementById('info').innerHTML = info;
-                        }
-                    });
+    // Function to handle feature clicks
+    function handleFeatureClick(event) {
+        map.forEachFeatureAtPixel(event.pixel, function (feature) {
+            const props = feature.getProperties();
+            let info = '';
+            for (let key in props) {
+                if (key !== 'geometry') {
+                    info += `${key}: ${props[key]}<br>`;
+                }
             }
+            document.getElementById('info').innerHTML = info;
         });
-    </script>
+    }
+
+    // Adding click event listener to the map
+    map.on('click', handleFeatureClick);
+</script>
 </body>
 </html>
