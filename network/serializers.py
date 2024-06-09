@@ -18,16 +18,18 @@ class CableSerializer(GeoFeatureModelSerializer):
         fields = ('id', 'name', 'geometry')
 
 
-class ManholeSerializer(serializers.ModelSerializer):
+class ManholeSerializer(GeoFeatureModelSerializer):
     class Meta:
         model = Manhole
-        fields = '__all__'
+        geo_field = "location"
+        fields = ('id', 'name', 'location')
 
 
-class SegmentSerializer(serializers.ModelSerializer):
+class SegmentSerializer(GeoFeatureModelSerializer):
     class Meta:
         model = Segment
-        fields = '__all__'
+        geo_field = "geometry"
+        fields = ('id', 'cable', 'start_manhole', 'end_manhole', 'geometry', 'description')
 
 
 class DuctSerializer(GeoFeatureModelSerializer):

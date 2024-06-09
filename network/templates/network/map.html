@@ -1,17 +1,32 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Map View</title>
+    <title>Map View with Layer Switcher</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v9.2.4/ol.css">
     <style>
         .map {
             height: 100vh;
             width: 100%;
         }
+        .layer-switcher {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+        }
+        .layer-switcher input {
+            margin-right: 5px;
+        }
     </style>
 </head>
 <body>
 <div id="map" class="map"></div>
+<div class="layer-switcher" id="layer-switcher">
+    <h3>Layers</h3>
+</div>
 <div id="info" style="position: absolute; bottom: 10px; left: 10px; background: rgba(255, 255, 255, 0.8); padding: 10px;"></div>
 <script src="https://cdn.jsdelivr.net/npm/ol@v9.2.4/dist/ol.js"></script>
 <script>
@@ -34,7 +49,9 @@
         'tracks': 'http://localhost:8000/api/tracks/',
         'ducts': 'http://localhost:8000/api/ducts/',
         'subducts': 'http://localhost:8000/api/subducts/',
-        'cables': 'http://localhost:8000/api/cables/'
+        'cables': 'http://localhost:8000/api/cables/',
+        'manholes': 'http://localhost:8000/api/manholes/',
+        'segments': 'http://localhost:8000/api/segments/'
     };
 
     const styles = {
@@ -61,8 +78,28 @@
                 color: 'red',
                 width: 2
             })
+        }),
+        'manholes': new ol.style.Style({
+            image: new ol.style.Circle({
+                radius: 5,
+                fill: new ol.style.Fill({
+                    color: 'yellow'
+                }),
+                stroke: new ol.style.Stroke({
+                    color: 'black',
+                    width: 1
+                })
+            })
+        }),
+        'segments': new ol.style.Style({
+            stroke: new ol.style.Stroke({
+                color: 'purple',
+                width: 2
+            })
         })
     };
+
+    const layerSwitcher = document.getElementById('layer-switcher');
 
     for (const [key, url] of Object.entries(urls)) {
         fetch(url)
@@ -81,6 +118,20 @@
                 });
                 map.addLayer(vectorLayer);
                 console.log(`Layer for ${key} added to map.`);
+
+                // Add layer to switcher
+                const layerItem = document.createElement('div');
+                const layerCheckbox = document.createElement('input');
+                layerCheckbox.type = 'checkbox';
+                layerCheckbox.checked = true;
+                layerCheckbox.onchange = () => {
+                    vectorLayer.setVisible(layerCheckbox.checked);
+                };
+                const layerLabel = document.createElement('label');
+                layerLabel.textContent = key.charAt(0).toUpperCase() + key.slice(1);
+                layerItem.appendChild(layerCheckbox);
+                layerItem.appendChild(layerLabel);
+                layerSwitcher.appendChild(layerItem);
             });
     }
 
